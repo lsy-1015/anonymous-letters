@@ -140,24 +140,29 @@ function App() {
             borderRight: isMobile ? 'none' : '1px solid #e5e7eb',
             marginBottom: isMobile ? '10px' : '0'
           }}>
-            {friends.map(friend => (
-              <button
-                key={friend.id}
-                onClick={() => selectFriend(friend)}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: selectedFriend?.id === friend.id ? '#6B8E23' : '#f3f4f6',
-                  color: selectedFriend?.id === friend.id ? 'white' : '#111827',
-                  borderRadius: '8px',
-                  border: '1px solid #e5e7eb',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  flex: '1 0 auto'
-                }}
-              >
-                {friend.name}
-              </button>
-            ))}
+          {friends.map(friend => (
+            <button
+              key={friend.id}
+              onClick={() => selectFriend(friend)}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: selectedFriend?.id === friend.id ? '#6B8E23' : '#f3f4f6',
+                color: selectedFriend?.id === friend.id ? 'white' : '#111827',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                cursor: 'pointer',
+                fontSize: '14px',
+                flex: '1 0 auto',
+                maxWidth: '100px',      // 버튼 최대 너비 제한
+                whiteSpace: 'nowrap',   // 글자 줄바꿈 방지
+                overflow: 'hidden',     // 넘치는 글자 숨기기
+                textOverflow: 'ellipsis'// ... 표시
+              }}
+            >
+              {friend.name}
+            </button>
+          ))}
+
           </div>
 
           {/* 메인 */}
