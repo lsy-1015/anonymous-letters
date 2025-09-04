@@ -10,7 +10,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
 
-  // 화면 크기 체크
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 600);
     window.addEventListener('resize', handleResize);
@@ -23,10 +22,7 @@ function App() {
 
   const fetchFriends = async () => {
     try {
-      const { data, error } = await supabase
-        .from('friends')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('friends').select('*').order('name');
       if (error) throw error;
       setFriends(data || []);
     } catch (error) {
@@ -40,7 +36,7 @@ function App() {
       setLoading(true);
       const { data, error } = await supabase
         .from('letters')
-        .select(`*, likes:likes(id)`)
+        .select('*, likes:likes(id)')
         .eq('friend_id', friendId)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -138,28 +134,29 @@ function App() {
           <div style={{
             width: isMobile ? '100%' : '200px',
             display: 'flex',
-            flexDirection: isMobile ? 'row' : 'column',
-            overflowX: isMobile ? 'auto' : 'visible',
-            borderRight: isMobile ? 'none' : '1px solid #e5e7eb',
+            flexWrap: 'wrap', 
+            gap: '8px',
             padding: '10px 15px',
+            borderRight: isMobile ? 'none' : '1px solid #e5e7eb',
             marginBottom: isMobile ? '10px' : '0'
           }}>
             {friends.map(friend => (
-              <div key={friend.id} onClick={() => selectFriend(friend)} style={{
-                padding: '10px',
-                marginRight: isMobile ? '8px' : '0',
-                marginBottom: isMobile ? '0' : '8px',
-                backgroundColor: selectedFriend?.id === friend.id ? '#6B8E23' : 'white',
-                color: selectedFriend?.id === friend.id ? 'white' : '#111827',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                cursor: 'pointer',
-                flex: '0 0 auto',
-                minWidth: isMobile ? '80px' : 'auto',
-                textAlign: 'center'
-              }}>
+              <button
+                key={friend.id}
+                onClick={() => selectFriend(friend)}
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: selectedFriend?.id === friend.id ? '#6B8E23' : '#f3f4f6',
+                  color: selectedFriend?.id === friend.id ? 'white' : '#111827',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  flex: '1 0 auto'
+                }}
+              >
                 {friend.name}
-              </div>
+              </button>
             ))}
           </div>
 
@@ -183,13 +180,15 @@ function App() {
                     placeholder="나쁜 말 쓰라고 만든 곳 아닌 거 알지"
                     style={{
                       width: '100%',
-                      height: '120px',
+                      minHeight: '120px',
+                      maxHeight: '250px',
                       padding: '15px',
                       border: '1px solid #bbf7d0',
                       borderRadius: '8px',
                       fontSize: '14px',
                       resize: 'vertical',
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box'
                     }}
                   />
                   <button
