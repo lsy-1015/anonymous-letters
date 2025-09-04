@@ -39,12 +39,14 @@ function App() {
         .select('*, likes:likes(id)')
         .eq('friend_id', friendId)
         .order('created_at', { ascending: false });
+
       if (error) throw error;
 
       const lettersWithLikes = data.map(letter => ({
         ...letter,
         likes_count: letter.likes ? letter.likes.length : 0
       }));
+
       setLetters(lettersWithLikes || []);
     } catch (error) {
       console.error('편지 불러오기 실패:', error);
@@ -59,11 +61,13 @@ function App() {
       alert('내용을 입력해주세요.');
       return;
     }
+
     try {
       setLoading(true);
       const { error } = await supabase
         .from('letters')
         .insert([{ friend_id: selectedFriend.id, content: letterContent }]);
+
       if (error) throw error;
 
       setLetterContent('');
@@ -87,13 +91,15 @@ function App() {
       alert('이미 좋아요를 눌렀습니다.');
       return;
     }
+
     try {
       const { error } = await supabase
         .from('likes')
         .insert([{ letter_id: letterId, friend_id: selectedFriend.id }]);
+
       if (error) throw error;
 
-      setLetters(letters.map(l =>
+      setLetters(letters.map(l => 
         l.id === letterId ? { ...l, likes_count: (l.likes_count || 0) + 1 } : l
       ));
 
@@ -106,63 +112,65 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '10px' }}>
-      <div style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        overflow: 'hidden'
+      <div style={{ 
+        maxWidth: '800px', 
+        margin: '0 auto', 
+        backgroundColor: 'white', 
+        borderRadius: '12px', 
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)', 
+        overflow: 'hidden' 
       }}>
         {/* 헤더 */}
-        <div style={{
-          backgroundColor: '#6B8E23',
-          color: 'white',
-          padding: '20px',
-          textAlign: 'center'
+        <div style={{ 
+          backgroundColor: '#6B8E23', 
+          color: 'white', 
+          padding: '20px', 
+          textAlign: 'center' 
         }}>
           <h1 style={{ margin: 0, fontSize: '24px' }}>🖤 익명 편지함 🖤</h1>
           <p style={{ margin: '5px 0 0 0', opacity: 0.9 }}>이상한 거 보이면 삭제함</p>
         </div>
 
-        <div style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          minHeight: '600px'
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: isMobile ? 'column' : 'row', 
+          minHeight: '600px' 
         }}>
-          {/* 친구 목록 */}
-          <div style={{
-            width: isMobile ? '100%' : '200px',
-            display: 'flex',
-            flexWrap: 'wrap', 
-            gap: '8px',
-            padding: '10px 15px',
+          {/* 친구 목록 - 5명씩 2줄 */}
+          <div style={{ 
+            width: isMobile ? '100%' : '300px',
+            padding: '15px',
             borderRight: isMobile ? 'none' : '1px solid #e5e7eb',
             marginBottom: isMobile ? '10px' : '0'
           }}>
-          {friends.map(friend => (
-            <button
-              key={friend.id}
-              onClick={() => selectFriend(friend)}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: selectedFriend?.id === friend.id ? '#6B8E23' : '#f3f4f6',
-                color: selectedFriend?.id === friend.id ? 'white' : '#111827',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                cursor: 'pointer',
-                fontSize: '14px',
-                flex: '1 0 auto',
-                maxWidth: '100px',      // 버튼 최대 너비 제한
-                whiteSpace: 'nowrap',   // 글자 줄바꿈 방지
-                overflow: 'hidden',     // 넘치는 글자 숨기기
-                textOverflow: 'ellipsis'// ... 표시
-              }}
-            >
-              {friend.name}
-            </button>
-          ))}
-
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: '8px',
+              maxWidth: '100%'
+            }}>
+              {friends.map(friend => (
+                <button
+                  key={friend.id}
+                  onClick={() => selectFriend(friend)}
+                  style={{
+                    padding: '8px 4px',
+                    backgroundColor: selectedFriend?.id === friend.id ? '#6B8E23' : '#f3f4f6',
+                    color: selectedFriend?.id === friend.id ? 'white' : '#111827',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    minWidth: 0
+                  }}
+                >
+                  {friend.name}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* 메인 */}
@@ -219,7 +227,6 @@ function App() {
                   <h3 style={{ margin: '0 0 15px 0', color: '#065f46' }}>
                     {selectedFriend.name} 익명 편지 {letters.length}개
                   </h3>
-
                   {loading ? (
                     <p style={{ color: '#6b7280' }}>로딩 중...</p>
                   ) : letters.length === 0 ? (
@@ -227,14 +234,21 @@ function App() {
                   ) : (
                     <div>
                       {letters.map(letter => (
-                        <div key={letter.id} style={{
-                          backgroundColor: '#f9fafb',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          padding: '15px',
-                          marginBottom: '10px'
-                        }}>
-                          <p style={{ margin: '0 0 8px 0', lineHeight: '1.5', color: '#111827' }}>
+                        <div
+                          key={letter.id}
+                          style={{
+                            backgroundColor: '#f9fafb',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            padding: '15px',
+                            marginBottom: '10px'
+                          }}
+                        >
+                          <p style={{ 
+                            margin: '0 0 8px 0', 
+                            lineHeight: '1.5', 
+                            color: '#111827' 
+                          }}>
                             {letter.content}
                           </p>
                           <small style={{ color: '#6b7280' }}>
