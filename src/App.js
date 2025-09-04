@@ -160,7 +160,7 @@ function App() {
                     borderRadius: '8px',
                     border: '1px solid #e5e7eb',
                     cursor: 'pointer',
-                    fontSize: '12px',
+                    fontSize: isMobile ? '12px' : '14px',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
