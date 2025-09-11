@@ -9,6 +9,8 @@ function App() {
   const [letters, setLetters] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 600);
+  const [replyContent, setReplyContent] = useState({});
+  const [showReplyForm, setShowReplyForm] = useState({});
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 600);
@@ -36,18 +38,31 @@ function App() {
       setLoading(true);
       const { data, error } = await supabase
         .from('letters')
-        .select('*, likes:likes(id)')
+        .select(`
+          *, 
+          likes:likes(id),
+          replies:replies(
+            id,
+            content,
+            created_at,
+            reply_likes:reply_likes(id)
+          )
+        `)
         .eq('friend_id', friendId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const lettersWithLikes = data.map(letter => ({
+      const lettersWithLikesAndReplies = data.map(letter => ({
         ...letter,
-        likes_count: letter.likes ? letter.likes.length : 0
+        likes_count: letter.likes ? letter.likes.length : 0,
+        replies: letter.replies ? letter.replies.map(reply => ({
+          ...reply,
+          likes_count: reply.reply_likes ? reply.reply_likes.length : 0
+        })).sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) : []
       }));
 
-      setLetters(lettersWithLikes || []);
+      setLetters(lettersWithLikesAndReplies || []);
     } catch (error) {
       console.error('편지 불러오기 실패:', error);
       alert('편지를 불러올 수 없습니다.');
@@ -80,6 +95,29 @@ function App() {
     }
   };
 
+  const sendReply = async (letterId) => {
+    const content = replyContent[letterId];
+    if (!content || !content.trim()) {
+      alert('답글 내용을 입력해주세요.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('replies')
+        .insert([{ letter_id: letterId, content: content }]);
+
+      if (error) throw error;
+
+      setReplyContent(prev => ({ ...prev, [letterId]: '' }));
+      setShowReplyForm(prev => ({ ...prev, [letterId]: false }));
+      fetchLetters(selectedFriend.id);
+    } catch (error) {
+      console.error('답글 전송 실패:', error);
+      alert('답글 전송에 실패했습니다.');
+    }
+  };
+
   const selectFriend = (friend) => {
     setSelectedFriend(friend);
     fetchLetters(friend.id);
@@ -108,6 +146,50 @@ function App() {
       console.error('좋아요 실패:', error);
       alert('좋아요 반영 실패');
     }
+  };
+
+  const handleReplyLike = async (replyId, letterId) => {
+    const likedReplies = JSON.parse(localStorage.getItem('likedReplies') || '[]').map(Number);
+    if (likedReplies.includes(Number(replyId))) {
+      alert('이미 좋아요를 눌렀습니다.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('reply_likes')
+        .insert([{ reply_id: replyId }]);
+
+      if (error) throw error;
+
+      setLetters(letters.map(letter => 
+        letter.id === letterId ? {
+          ...letter,
+          replies: letter.replies.map(reply =>
+            reply.id === replyId ? { ...reply, likes_count: (reply.likes_count || 0) + 1 } : reply
+          )
+        } : letter
+      ));
+
+      localStorage.setItem('likedReplies', JSON.stringify([...likedReplies, Number(replyId)]));
+    } catch (error) {
+      console.error('답글 좋아요 실패:', error);
+      alert('답글 좋아요 반영 실패');
+    }
+  };
+
+  const toggleReplyForm = (letterId) => {
+    setShowReplyForm(prev => ({
+      ...prev,
+      [letterId]: !prev[letterId]
+    }));
+  };
+
+  const handleReplyContentChange = (letterId, content) => {
+    setReplyContent(prev => ({
+      ...prev,
+      [letterId]: content
+    }));
   };
 
   return (
@@ -241,9 +323,10 @@ function App() {
                             border: '1px solid #e5e7eb',
                             borderRadius: '8px',
                             padding: '15px',
-                            marginBottom: '10px'
+                            marginBottom: '15px'
                           }}
                         >
+                          {/* 원본 편지 */}
                           <p style={{ 
                             margin: '0 0 8px 0', 
                             lineHeight: '1.5', 
@@ -254,7 +337,9 @@ function App() {
                           <small style={{ color: '#6b7280' }}>
                             {new Date(letter.created_at).toLocaleString('ko-KR')}
                           </small>
-                          <div style={{ marginTop: '8px' }}>
+                          
+                          {/* 편지 액션 버튼들 */}
+                          <div style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <button
                               onClick={() => handleLike(letter.id)}
                               style={{
@@ -268,7 +353,127 @@ function App() {
                             >
                               👍 {letter.likes_count || 0}
                             </button>
+                            <button
+                              onClick={() => toggleReplyForm(letter.id)}
+                              style={{
+                                background: '#f3f4f6',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                padding: '4px 10px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                color: '#374151'
+                              }}
+                            >
+                              💬 답글 {letter.replies?.length || 0}
+                            </button>
                           </div>
+
+                          {/* 답글 작성 폼 */}
+                          {showReplyForm[letter.id] && (
+                            <div style={{ 
+                              marginTop: '12px', 
+                              padding: '12px', 
+                              backgroundColor: '#f3f4f6', 
+                              borderRadius: '6px',
+                              border: '1px solid #e5e7eb'
+                            }}>
+                              <textarea
+                                value={replyContent[letter.id] || ''}
+                                onChange={(e) => handleReplyContentChange(letter.id, e.target.value)}
+                                placeholder="익명 답글을 작성해주세요..."
+                                style={{
+                                  width: '100%',
+                                  minHeight: '80px',
+                                  padding: '10px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '4px',
+                                  fontSize: '13px',
+                                  resize: 'vertical',
+                                  fontFamily: 'inherit',
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                              <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={() => sendReply(letter.id)}
+                                  disabled={!replyContent[letter.id]?.trim()}
+                                  style={{
+                                    backgroundColor: replyContent[letter.id]?.trim() ? '#6B8E23' : '#9ca3af',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '6px 12px',
+                                    borderRadius: '4px',
+                                    cursor: replyContent[letter.id]?.trim() ? 'pointer' : 'not-allowed',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  답글 보내기
+                                </button>
+                                <button
+                                  onClick={() => toggleReplyForm(letter.id)}
+                                  style={{
+                                    backgroundColor: '#9ca3af',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '6px 12px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 답글 목록 */}
+                          {letter.replies && letter.replies.length > 0 && (
+                            <div style={{ marginTop: '12px' }}>
+                              {letter.replies.map(reply => (
+                                <div
+                                  key={reply.id}
+                                  style={{
+                                    backgroundColor: '#ffffff',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '6px',
+                                    padding: '12px',
+                                    marginBottom: '8px',
+                                    marginLeft: '20px',
+                                    borderLeft: '3px solid #6B8E23'
+                                  }}
+                                >
+                                  <p style={{ 
+                                    margin: '0 0 6px 0', 
+                                    fontSize: '13px',
+                                    lineHeight: '1.4', 
+                                    color: '#374151' 
+                                  }}>
+                                    {reply.content}
+                                  </p>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <small style={{ color: '#9ca3af', fontSize: '11px' }}>
+                                      {new Date(reply.created_at).toLocaleString('ko-KR')}
+                                    </small>
+                                    <button
+                                      onClick={() => handleReplyLike(reply.id, letter.id)}
+                                      style={{
+                                        background: '#f9fafb',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '4px',
+                                        padding: '2px 6px',
+                                        cursor: 'pointer',
+                                        fontSize: '11px'
+                                      }}
+                                    >
+                                      👍 {reply.likes_count || 0}
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
