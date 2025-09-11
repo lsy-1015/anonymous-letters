@@ -381,7 +381,7 @@ function App() {
                               <textarea
                                 value={replyContent[letter.id] || ''}
                                 onChange={(e) => handleReplyContentChange(letter.id, e.target.value)}
-                                placeholder="익명 답글을 작성해주세요..."
+                                placeholder="익명 답글을 작성"
                                 style={{
                                   width: '100%',
                                   minHeight: '80px',
